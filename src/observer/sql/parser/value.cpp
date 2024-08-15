@@ -18,11 +18,11 @@ See the Mulan PSL v2 for more details. */
 #include "common/log/log.h"
 #include <sstream>
 
-const char *ATTR_TYPE_NAME[] = {"undefined", "chars", "ints", "floats", "booleans"};
+const char *ATTR_TYPE_NAME[] = {"undefined", "chars", "ints", "floats", "dates","booleans"};
 
 const char *attr_type_to_string(AttrType type)
 {
-  if (type >= AttrType::UNDEFINED && type <= AttrType::FLOATS) {
+  if (type >= AttrType::UNDEFINED && type <= AttrType::DATES) {
     return ATTR_TYPE_NAME[static_cast<int>(type)];
   }
   return "unknown";
@@ -41,6 +41,8 @@ Value::Value(int val) { set_int(val); }
 
 Value::Value(float val) { set_float(val); }
 
+Value::Value(unsigned int val) { set_date(val); }
+
 Value::Value(bool val) { set_boolean(val); }
 
 Value::Value(const char *s, int len /*= 0*/) { set_string(s, len); }
@@ -58,6 +60,10 @@ void Value::set_data(char *data, int length)
     case AttrType::FLOATS: {
       num_value_.float_value_ = *(float *)data;
       length_                 = length;
+    } break;
+    case AttrType::DATES: {
+      num_value_.date_value_ = *(unsigned int *)data;
+      length_               = length;
     } break;
     case AttrType::BOOLEANS: {
       num_value_.bool_value_ = *(int *)data != 0;
@@ -78,6 +84,12 @@ void Value::set_int(int val)
 void Value::set_float(float val)
 {
   attr_type_              = AttrType::FLOATS;
+  num_value_.float_value_ = val;
+  length_                 = sizeof(val);
+}
+void Value::set_date(unsigned int val)
+{
+  attr_type_              = AttrType::DATES;
   num_value_.float_value_ = val;
   length_                 = sizeof(val);
 }
@@ -107,6 +119,9 @@ void Value::set_value(const Value &value)
     } break;
     case AttrType::FLOATS: {
       set_float(value.get_float());
+    } break;
+    case AttrType::DATES: {
+      set_date(value.get_date());
     } break;
     case AttrType::CHARS: {
       set_string(value.get_string().c_str());
@@ -142,6 +157,9 @@ std::string Value::to_string() const
     case AttrType::FLOATS: {
       os << common::double_to_str(num_value_.float_value_);
     } break;
+    case AttrType::DATES: {
+      os << num_value_.date_value_;
+    } break;
     case AttrType::BOOLEANS: {
       os << num_value_.bool_value_;
     } break;
@@ -164,6 +182,9 @@ int Value::compare(const Value &other) const
       } break;
       case AttrType::FLOATS: {
         return common::compare_float((void *)&this->num_value_.float_value_, (void *)&other.num_value_.float_value_);
+      } break;
+      case AttrType::DATES: {
+        return common::compare_date((void *)&this->num_value_.date_value_, (void *)&other.num_value_.date_value_);
       } break;
       case AttrType::CHARS: {
         return common::compare_string((void *)this->str_value_.c_str(),
@@ -206,6 +227,9 @@ int Value::get_int() const
     case AttrType::FLOATS: {
       return (int)(num_value_.float_value_);
     }
+    case AttrType::DATES: {
+      return (int)(num_value_.date_value_);
+    }
     case AttrType::BOOLEANS: {
       return (int)(num_value_.bool_value_);
     }
@@ -234,8 +258,42 @@ float Value::get_float() const
     case AttrType::FLOATS: {
       return num_value_.float_value_;
     } break;
+    case AttrType::DATES: {
+      return float(num_value_.date_value_);
+    } break;
     case AttrType::BOOLEANS: {
       return float(num_value_.bool_value_);
+    } break;
+    default: {
+      LOG_WARN("unknown data type. type=%d", attr_type_);
+      return 0;
+    }
+  }
+  return 0;
+}
+//类型强转？？
+unsigned int Value::get_date() const
+{
+  switch (attr_type_) {
+    case AttrType::CHARS: {
+      try {
+        return std::stof(str_value_);
+      } catch (std::exception const &ex) {
+        LOG_TRACE("failed to convert string to float. s=%s, ex=%s", str_value_.c_str(), ex.what());
+        return 0.0;
+      }
+    } break;
+    case AttrType::INTS: {
+      return num_value_.int_value_;
+    } break;
+    case AttrType::FLOATS: {
+      return num_value_.float_value_;
+    } break;
+    case AttrType::DATES: {
+      return num_value_.date_value_;
+    } break;
+    case AttrType::BOOLEANS: {
+      return num_value_.bool_value_;
     } break;
     default: {
       LOG_WARN("unknown data type. type=%d", attr_type_);
@@ -274,6 +332,9 @@ bool Value::get_boolean() const
     case AttrType::FLOATS: {
       float val = num_value_.float_value_;
       return val >= EPSILON || val <= -EPSILON;
+    } break;
+    case AttrType::DATES: {
+      return num_value_.date_value_ != 0;
     } break;
     case AttrType::BOOLEANS: {
       return num_value_.bool_value_;
