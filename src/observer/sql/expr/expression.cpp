@@ -229,6 +229,8 @@ RC ComparisonExpr::eval(Chunk &chunk, std::vector<uint8_t> &select)
     rc = compare_column<int>(left_column, right_column, select);
   } else if (left_column.attr_type() == AttrType::FLOATS) {
     rc = compare_column<float>(left_column, right_column, select);
+  } else if (left_column.attr_type() == AttrType::DATES) {
+    rc = compare_column<unsigned int>(left_column, right_column, select);
   } else {
     // TODO: support string compare
     LOG_WARN("unsupported data type %d", left_column.attr_type());

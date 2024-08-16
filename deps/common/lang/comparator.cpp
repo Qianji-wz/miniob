@@ -45,7 +45,18 @@ int compare_float(void *arg1, void *arg2)
   }
   return 0;
 }
-
+int compare_date(void *arg1, void *arg2)
+{
+  unsigned int v1  = *(unsigned int *)arg1;
+  unsigned int v2  = *(unsigned int *)arg2;
+  if (v1 > v2) {
+    return 1;
+  } else if (v1 < v2) {
+    return -1;
+  } else {
+    return 0;
+  }
+}
 int compare_string(void *arg1, int arg1_max_length, void *arg2, int arg2_max_length)
 {
   const char *s1     = (const char *)arg1;

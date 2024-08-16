@@ -51,6 +51,8 @@ RC SetVariableExecutor::var_value_to_boolean(const Value &var_value, bool &bool_
       bool_value = var_value.get_int() != 0;
     } else if (var_value.attr_type() == AttrType::FLOATS) {
       bool_value = var_value.get_float() != 0.0;
+    }else if (var_value.attr_type() == AttrType::DATES) {
+      bool_value = var_value.get_date() != 0;
     } else if (var_value.attr_type() == AttrType::CHARS) {
 
       std::string true_strings[] = {"true", "on", "yes", "t", "1"};
