@@ -136,6 +136,8 @@ FORMAT                                  RETURN_TOKEN(FORMAT);
 "-" |
 "*" |
 "/"                                     { return yytext[0]; }
+
+[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}          yylval->string = strdup(yytext); RETURN_TOKEN(DATE);
 \"[^"]*\"                               yylval->string = strdup(yytext); RETURN_TOKEN(SSS);
 '[^']*\'                                yylval->string = strdup(yytext); RETURN_TOKEN(SSS);
 

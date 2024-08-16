@@ -53,6 +53,14 @@ public:
    */
   RC create(Db *db, int32_t table_id, const char *path, const char *name, const char *base_dir,
       span<const AttrInfoSqlNode> attributes, StorageFormat storage_format);
+      
+  /**
+   * 删除一个表
+   * @param dir 表的路径
+   */
+  RC destory(const char* dir);
+
+
 
   /**
    * 打开一个表
