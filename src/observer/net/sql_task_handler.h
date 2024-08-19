@@ -26,7 +26,7 @@ class Communicator;
 class SQLStageEvent;
 
 /**
- * @brief SQL请求的处理器
+ * @brief  
  * @ingroup SQL
  */
 class SqlTaskHandler

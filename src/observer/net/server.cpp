@@ -280,6 +280,7 @@ int NetServer::serve()
       if (poll_fd.revents & (POLLERR | POLLHUP | POLLNVAL)) {
         LOG_ERROR("poll error. fd = %d, revents = %d", poll_fd.fd, poll_fd.revents);
         break;
+
       }
 
       this->accept(server_socket_);

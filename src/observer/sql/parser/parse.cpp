@@ -33,6 +33,10 @@ int sql_parse(const char *st, ParsedSqlResult *sql_result);
 
 RC parse(const char *st, ParsedSqlResult *sql_result)
 {
-  sql_parse(st, sql_result);
+  int res = sql_parse(st, sql_result);
+
+  if (res != 0) {
+    return RC::INVALID_ARGUMENT;
+  }
   return RC::SUCCESS;
 }
