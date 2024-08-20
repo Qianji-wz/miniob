@@ -168,7 +168,17 @@ std::string Value::to_string() const
       os << common::double_to_str(num_value_.float_value_);
     } break;
     case AttrType::DATES: {
-      os << num_value_.date_value_;
+      unsigned int date = num_value_.date_value_;
+
+      // 提取年、月、日部分
+      int year  = date / 10000;
+      int month = (date / 100) % 100;
+      int day   = date % 100;
+
+      // 将它们格式化为字符串
+      char dateStr[11];  // "YYYY-MM-DD" 需要 11 个字符（包括 null 终止符）
+      snprintf(dateStr, sizeof(dateStr), "%04u-%02u-%02u", year, month, day);
+      os << dateStr;
     } break;
     case AttrType::BOOLEANS: {
       os << num_value_.bool_value_;
