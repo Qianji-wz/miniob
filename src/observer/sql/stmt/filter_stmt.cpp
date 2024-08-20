@@ -16,6 +16,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/lang/string.h"
 #include "common/log/log.h"
 #include "common/rc.h"
+#include "sql/parser/value.h"
 #include "storage/db/db.h"
 #include "storage/table/table.h"
 
@@ -90,6 +91,8 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
   }
 
   filter_unit = new FilterUnit;
+  //定义两个attrtype，用于判断类型是否相同
+  AttrType attr_left, attr_right;
 
   if (condition.left_is_attr) {
     Table           *table = nullptr;
@@ -99,10 +102,12 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       LOG_WARN("cannot find attr");
       return rc;
     }
+    attr_left = field->type();
     FilterObj filter_obj;
     filter_obj.init_attr(Field(table, field));
     filter_unit->set_left(filter_obj);
   } else {
+    attr_left = condition.left_value.attr_type();
     FilterObj filter_obj;
     filter_obj.init_value(condition.left_value);
     filter_unit->set_left(filter_obj);
@@ -116,17 +121,23 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       LOG_WARN("cannot find attr");
       return rc;
     }
+    attr_right = field->type();
     FilterObj filter_obj;
     filter_obj.init_attr(Field(table, field));
     filter_unit->set_right(filter_obj);
   } else {
+    attr_right = condition.right_value.attr_type();
     FilterObj filter_obj;
     filter_obj.init_value(condition.right_value);
     filter_unit->set_right(filter_obj);
   }
-
   filter_unit->set_comp(comp);
-
   // 检查两个类型是否能够比较
+
+  if (attr_right != attr_left) {
+    // LOG_ERROR("数据类型不匹配");
+    return RC::INVALID_ARGUMENT;
+  }
+
   return rc;
 }
