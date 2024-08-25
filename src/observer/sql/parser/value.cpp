@@ -176,8 +176,11 @@ std::string Value::to_string() const
       int day   = date % 100;
 
       // 将它们格式化为字符串
-      char dateStr[11];  // "YYYY-MM-DD" 需要 11 个字符（包括 null 终止符）
-      snprintf(dateStr, sizeof(dateStr), "%04u-%02u-%02u", year, month, day);
+      // char dateStr[11];  // "YYYY-MM-DD" 需要 11 个字符（包括 null 终止符）
+      // snprintf(dateStr, sizeof(dateStr), "%04d-%02d-%02d", year, month, day);
+      std::string dateStr = std::to_string(year) + "-" + (month < 10 ? "0" : "") + std::to_string(month) + "-" +
+                            (day < 10 ? "0" : "") + std::to_string(day);
+
       os << dateStr;
     } break;
     case AttrType::BOOLEANS: {
