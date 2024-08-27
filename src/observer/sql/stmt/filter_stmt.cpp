@@ -93,7 +93,8 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
   filter_unit = new FilterUnit;
   //定义两个attrtype，用于判断类型是否相同
   AttrType attr_left, attr_right;
-
+  int      left_is_attr  = condition.left_is_attr;
+  int      right_is_attr = condition.right_is_attr;
   if (condition.left_is_attr) {
     Table           *table = nullptr;
     const FieldMeta *field = nullptr;
@@ -132,11 +133,50 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     filter_unit->set_right(filter_obj);
   }
   filter_unit->set_comp(comp);
-  // 检查两个类型是否能够比较
 
+  // 检查两个类型是否能够比较
   if (attr_right != attr_left) {
-    // LOG_ERROR("数据类型不匹配");
-    return RC::INVALID_ARGUMENT;
+    //尝试类型转换
+    if (attr_left == AttrType::FLOATS && attr_right == AttrType::INTS) {
+      if (left_is_attr && !right_is_attr) {
+        //左属性右数据
+        FilterObj filter_obj;
+        Value     new_value;
+        new_value.set_float(condition.right_value.get_int());
+        filter_obj.init_value(new_value);
+        filter_unit->set_right(filter_obj);
+      } else if (!left_is_attr && right_is_attr) {
+        //左数据右属性
+        FilterObj filter_obj;
+        Value     new_value;
+        new_value.set_int(condition.left_value.get_float());
+        filter_obj.init_value(new_value);
+        filter_unit->set_left(filter_obj);
+      } else {
+        return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+      }
+
+    } else if (attr_left == AttrType::INTS && attr_right == AttrType::FLOATS) {
+      if (left_is_attr && !right_is_attr) {
+        //左属性右数据
+        FilterObj filter_obj;
+        Value     new_value;
+        new_value.set_int(condition.right_value.get_float());
+        filter_obj.init_value(new_value);
+        filter_unit->set_right(filter_obj);
+      } else if (!left_is_attr && right_is_attr) {
+        //左数据右属性
+        FilterObj filter_obj;
+        Value     new_value;
+        new_value.set_float(condition.left_value.get_int());
+        filter_obj.init_value(new_value);
+        filter_unit->set_left(filter_obj);
+      } else {
+        return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+      }
+    } else {
+      return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+    }
   }
 
   return rc;

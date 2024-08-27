@@ -14,9 +14,12 @@ See the Mulan PSL v2 for more details. */
 
 #include "sql/stmt/insert_stmt.h"
 #include "common/log/log.h"
+#include "sql/parser/value.h"
 #include "storage/db/db.h"
 #include "storage/table/table.h"
-
+#include <algorithm>
+#include <vector>
+std::vector<Value> InsertStmt::converted_values;
 InsertStmt::InsertStmt(Table *table, const Value *values, int value_amount)
     : table_(table), values_(values), value_amount_(value_amount)
 {}
@@ -38,6 +41,7 @@ RC InsertStmt::create(Db *db, const InsertSqlNode &inserts, Stmt *&stmt)
   }
 
   // check the fields number
+  converted_values.clear();
   const Value     *values     = inserts.values.data();
   const int        value_num  = static_cast<int>(inserts.values.size());
   const TableMeta &table_meta = table->table_meta();
@@ -46,21 +50,28 @@ RC InsertStmt::create(Db *db, const InsertSqlNode &inserts, Stmt *&stmt)
     LOG_WARN("schema mismatch. value num=%d, field num in schema=%d", value_num, field_num);
     return RC::SCHEMA_FIELD_MISSING;
   }
-
-  // check fields type
+  // Check fields type
   const int sys_field_num = table_meta.sys_field_num();
   for (int i = 0; i < value_num; i++) {
     const FieldMeta *field_meta = table_meta.field(i + sys_field_num);
     const AttrType   field_type = field_meta->type();
     const AttrType   value_type = values[i].attr_type();
-    if (field_type != value_type) {  // TODO try to convert the value type to field type
+    if (field_type != value_type) {
       LOG_WARN("field type mismatch. table=%s, field=%s, field type=%d, value_type=%d",
           table_name, field_meta->name(), field_type, value_type);
-      return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+      //尝试类型转换
+      if (field_type == AttrType::INTS && value_type == AttrType::FLOATS) {
+        converted_values.emplace_back(values[i].get_int());
+      } else if (field_type == AttrType::FLOATS && value_type == AttrType::INTS) {
+        converted_values.emplace_back(values[i].get_float());
+      } else {
+        return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+      }
+    } else {
+      converted_values.emplace_back(values[i]);
     }
   }
-
-  // everything alright
-  stmt = new InsertStmt(table, values, value_num);
+  values = converted_values.data();
+  stmt   = new InsertStmt(table, values, value_num);
   return RC::SUCCESS;
 }

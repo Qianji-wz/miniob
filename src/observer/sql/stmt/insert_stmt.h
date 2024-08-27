@@ -33,8 +33,8 @@ public:
   StmtType type() const override { return StmtType::INSERT; }
 
 public:
-  static RC create(Db *db, const InsertSqlNode &insert_sql, Stmt *&stmt);
-
+  static RC                 create(Db *db, const InsertSqlNode &insert_sql, Stmt *&stmt);
+  static std::vector<Value> converted_values;  // 用于存储转换后的值
 public:
   Table       *table() const { return table_; }
   const Value *values() const { return values_; }
