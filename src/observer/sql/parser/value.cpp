@@ -294,7 +294,7 @@ float Value::get_float() const
   }
   return 0;
 }
-//类型强转？？
+
 std::string Value::get_date() const { return this->to_string(); }
 
 std::string Value::get_string() const { return this->to_string(); }

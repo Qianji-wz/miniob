@@ -68,6 +68,11 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 //标识tokens
 %token  SEMICOLON
         BY
+        MAX_FUNC
+        MIN_FUNC
+        AVG_FUNC
+        SUM_FUNC
+        COUNT_FUNC
         CREATE
         DROP
         GROUP
@@ -115,6 +120,8 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         GE
         NE
 
+
+
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
 %union {
 
@@ -132,6 +139,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
   std::vector<RelAttrSqlNode> *              rel_attr_list;
   std::vector<std::string> *                 relation_list;
   char *                                     string;
+  const char *                               aggregate_func;  // 用于存储聚合函数类型
   int                                        number;
   float                                      floats;
 }
@@ -141,6 +149,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %token <string> ID
 %token <string> DATE_STR
 %token <string> SSS
+
 //非终结符
 
 /** type 定义了各种解析后的结果输出的是什么类型。类型对应了 union 中的定义的成员变量名称 **/
@@ -160,6 +169,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %type <relation_list>       rel_list
 %type <expression>          expression
 %type <expression_list>     expression_list
+%type <aggregate_func>      aggregate_func
 %type <expression_list>     group_by
 %type <sql_node>            calc_stmt
 %type <sql_node>            select_stmt
@@ -189,6 +199,9 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %left '*' '/'
 %nonassoc UMINUS
 %%
+
+
+
 
 commands: command_wrapper opt_semicolon  //commands or sqls. parser starts here.
   {
@@ -512,6 +525,14 @@ expression_list:
       $$->emplace($$->begin(), $1);
     }
     ;
+aggregate_func:
+    MAX_FUNC        { $$ = "max"; }
+  | MIN_FUNC        { $$ = "min"; }
+  | SUM_FUNC        { $$ = "sum"; }
+  | AVG_FUNC        { $$ = "avg"; }
+  | COUNT_FUNC      { $$ = "count";}
+  ;
+
 expression:
     expression '+' expression {
       $$ = create_arithmetic_expression(ArithmeticExpr::Type::ADD, $1, $3, sql_string, &@$);
@@ -546,7 +567,12 @@ expression:
     | '*' {
       $$ = new StarExpr();
     }
-    // your code here
+
+    // 聚合函数的解析
+    | aggregate_func LBRACE expression RBRACE {
+      $$ = create_aggregate_expression($1, $3, sql_string, &@$);
+    }
+
     ;
 
 rel_attr:
