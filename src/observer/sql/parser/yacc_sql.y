@@ -104,6 +104,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         VALUES
         FROM
         WHERE
+        LIKE
         AND
         SET
         ON
