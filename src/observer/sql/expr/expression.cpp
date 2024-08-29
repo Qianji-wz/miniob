@@ -164,6 +164,9 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
   if(comp_== LIKE){
     result = like_match(left.get_string(), right.get_string());
     return rc;
+  }else if(comp_ == NOT_LIKE){
+    result = !like_match(left.get_string(), right.get_string());
+    return rc;
   }
 
   int cmp_result = left.compare(right);
