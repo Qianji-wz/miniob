@@ -51,6 +51,7 @@ enum CompOp
   LESS_THAN,    ///< "<"
   GREAT_EQUAL,  ///< ">="
   GREAT_THAN,   ///< ">"
+  LIKE,
   NO_OP
 };
 
@@ -74,7 +75,6 @@ struct ConditionSqlNode
   RelAttrSqlNode right_attr;     ///< right-hand side attribute if right_is_attr = TRUE 右边的属性
   Value          right_value;    ///< right-hand side value if right_is_attr = FALSE
 };
-
 /**
  * @brief 描述一个select语句
  * @ingroup SQLParser

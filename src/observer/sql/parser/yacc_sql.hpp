@@ -107,12 +107,13 @@ extern int yydebug;
     LE = 308,                      /* LE  */
     GE = 309,                      /* GE  */
     NE = 310,                      /* NE  */
-    NUMBER = 311,                  /* NUMBER  */
-    FLOAT = 312,                   /* FLOAT  */
-    ID = 313,                      /* ID  */
-    DATE_STR = 314,                /* DATE_STR  */
-    SSS = 315,                     /* SSS  */
-    UMINUS = 316                   /* UMINUS  */
+    LK = 311,                      /* LK  */
+    NUMBER = 312,                  /* NUMBER  */
+    FLOAT = 313,                   /* FLOAT  */
+    ID = 314,                      /* ID  */
+    DATE_STR = 315,                /* DATE_STR  */
+    SSS = 316,                     /* SSS  */
+    UMINUS = 317                   /* UMINUS  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -140,7 +141,6 @@ union YYSTYPE
   char *                                     string;
   const char *                               aggregate_func;  // 用于存储聚合函数类型
   int                                        number;
-  
   float                                      floats;
 
 #line 147 "yacc_sql.hpp"
