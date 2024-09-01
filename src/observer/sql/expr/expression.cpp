@@ -16,6 +16,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/expr/aggregator.h"
 #include "sql/expr/tuple.h"
 #include "sql/expr/arithmetic_operator.hpp"
+#include "sql/parser/parse_defs.h"
 #include <memory>
 #include <regex>
 
@@ -129,42 +130,42 @@ ComparisonExpr::ComparisonExpr(CompOp comp, unique_ptr<Expression> left, unique_
 
 ComparisonExpr::~ComparisonExpr() {}
 
-
-
 // 将 LIKE 模式转化为正则表达式
-std::string convert_like_pattern_to_regex(const std::string &like_pattern) {
-    std::string regex_pattern = "^";
-    for (char c : like_pattern) {
-        switch (c) {
-            case '%':
-                regex_pattern += ".*";  // 匹配任意数量字符
-                break;
-            case '_':
-                regex_pattern += ".";   // 匹配单个字符
-                break;
-            default:
-                regex_pattern += std::regex_replace(std::string(1, c), std::regex(R"([\^\.\\\|\(\)\[\]\+\*\?\{\}])"), R"(\\$&)");
-                break;
-        }
+std::string convert_like_pattern_to_regex(const std::string &like_pattern)
+{
+  std::string regex_pattern = "^";
+  for (char c : like_pattern) {
+    switch (c) {
+      case '%':
+        regex_pattern += ".*";  // 匹配任意数量字符
+        break;
+      case '_':
+        regex_pattern += ".";  // 匹配单个字符
+        break;
+      default:
+        regex_pattern +=
+            std::regex_replace(std::string(1, c), std::regex(R"([\^\.\\\|\(\)\[\]\+\*\?\{\}])"), R"(\\$&)");
+        break;
     }
-    regex_pattern += "$";
-    return regex_pattern;
+  }
+  regex_pattern += "$";
+  return regex_pattern;
 }
 
 // LIKE 操作匹配
-bool like_match(const std::string &value, const std::string &like_pattern) {
-    std::regex regex_pattern(convert_like_pattern_to_regex(like_pattern));
-    return std::regex_match(value, regex_pattern);
+bool like_match(const std::string &value, const std::string &like_pattern)
+{
+  std::regex regex_pattern(convert_like_pattern_to_regex(like_pattern));
+  return std::regex_match(value, regex_pattern);
 }
-
 
 RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &result) const
 {
-  RC  rc         = RC::SUCCESS;
-  if(comp_== LIKE){
+  RC rc = RC::SUCCESS;
+  if (comp_ == LIKE) {
     result = like_match(left.get_string(), right.get_string());
     return rc;
-  }else if(comp_ == NOT_LIKE){
+  } else if (comp_ == NOT_LIKE) {
     result = !like_match(left.get_string(), right.get_string());
     return rc;
   }
@@ -193,7 +194,9 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
     case LIKE: {
       result = (cmp_result > 0);
     } break;
-
+    case NO_COMP: {
+      result = false;
+    } break;
     default: {
       LOG_WARN("unsupported comparison. %d", comp_);
       rc = RC::INTERNAL;

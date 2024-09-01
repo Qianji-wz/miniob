@@ -98,7 +98,7 @@ void Value::set_date(const char *s)
 {
   attr_type_ = AttrType::DATES;
   int y, m, d;
-  sscanf(s, "%d-%d-%d", &y, &m, &d);  // not check return value eq 3, lex guarantee
+  sscanf(s, "%d-%d-%d", &y, &m, &d);
   unsigned int dv        = y * 10000 + m * 100 + d;
   num_value_.date_value_ = dv;
   length_                = sizeof(dv);
@@ -228,7 +228,20 @@ int Value::compare(const Value &other) const
   } else if (this->attr_type_ == AttrType::FLOATS && other.attr_type_ == AttrType::INTS) {
     float other_data = other.num_value_.int_value_;
     return common::compare_float((void *)&this->num_value_.float_value_, (void *)&other_data);
+  } else if (this->attr_type_ == AttrType::INTS && other.attr_type_ == AttrType::CHARS) {
+    int other_data = other.get_int();
+    return common::compare_int((void *)&this->num_value_.int_value_, (void *)&other_data);
+  } else if (this->attr_type_ == AttrType::CHARS && other.attr_type_ == AttrType::INTS) {
+    int this_data = this->get_int();
+    return common::compare_int((void *)&this_data, (void *)&other.num_value_.int_value_);
+  } else if (this->attr_type_ == AttrType::CHARS && other.attr_type_ == AttrType::FLOATS) {
+    float this_data = this->get_float();
+    return common::compare_float((void *)&this_data, (void *)&other.num_value_.float_value_);
+  } else if (this->attr_type_ == AttrType::FLOATS && other.attr_type_ == AttrType::CHARS) {
+    float other_data = other.get_float();
+    return common::compare_float((void *)&this->num_value_.float_value_, (void *)&other_data);
   }
+
   LOG_WARN("not supported");
   return -1;  // TODO return rc?
 }

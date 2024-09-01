@@ -16,6 +16,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/lang/string.h"
 #include "common/log/log.h"
 #include "common/rc.h"
+#include "sql/parser/parse_defs.h"
 #include "sql/parser/value.h"
 #include "storage/db/db.h"
 #include "storage/table/table.h"
@@ -79,6 +80,27 @@ RC get_table_and_field(Db *db, Table *default_table, std::unordered_map<std::str
   return RC::SUCCESS;
 }
 
+double stringToDouble(const std::string &str)
+{
+  std::string numericPart;
+  bool        decimalPointEncountered = false;
+
+  // Traverse the string and accumulate numeric characters, including a single decimal point
+  for (char c : str) {
+    if (isdigit(c)) {
+      numericPart += c;
+    } else if (c == '.' && !decimalPointEncountered) {
+      numericPart += c;
+      decimalPointEncountered = true;  // Only allow one decimal point
+    } else {
+      break;  // Stop at the first non-numeric, non-decimal character
+    }
+  }
+
+  // Convert the accumulated numeric part to a double
+  return numericPart.empty() ? 0.0 : std::stod(numericPart);
+}
+
 RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
     const ConditionSqlNode &condition, FilterUnit *&filter_unit)
 {
@@ -134,7 +156,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
   }
   filter_unit->set_comp(comp);
 
-  // 检查两个类型是否能够比较
+  //检查两个类型是否能够比较
   if (attr_right != attr_left) {
     //尝试类型转换
     if (attr_left == AttrType::FLOATS && attr_right == AttrType::INTS) {
@@ -153,7 +175,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
         filter_obj.init_value(new_value);
         filter_unit->set_left(filter_obj);
       } else {
-        return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+        return rc;
       }
 
     } else if (attr_left == AttrType::INTS && attr_right == AttrType::FLOATS) {
@@ -172,15 +194,25 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
         filter_obj.init_value(new_value);
         filter_unit->set_left(filter_obj);
       } else {
-        return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+        return rc;
       }
-    } else {
+    } else if (attr_left == AttrType::DATES && attr_right == AttrType::CHARS) {
+      //不必尝试将字符串转成日期的格式
+      //因为在词法解析时已经判断过了
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+    } else if (attr_left == AttrType::CHARS && attr_right == AttrType::DATES) {
+      //将date转成char
+      return rc;
     }
+    // else if (attr_left == AttrType::CHARS && attr_right == AttrType::FLOATS) {
+    //   //将float转成char
+
+    // } else {
+    //   // LOG_INFO("set comop=NO_COMP");
+    //   // filter_unit->set_comp(CompOp::NO_COMP);
+    //   // return rc;
+    // }
   }
-
-
-
 
   return rc;
 }

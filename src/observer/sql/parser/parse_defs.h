@@ -53,6 +53,7 @@ enum CompOp
   GREAT_THAN,   ///< ">"
   LIKE,
   NOT_LIKE,
+  NO_COMP,
   NO_OP
 };
 
@@ -76,6 +77,13 @@ struct ConditionSqlNode
   RelAttrSqlNode right_attr;     ///< right-hand side attribute if right_is_attr = TRUE 右边的属性
   Value          right_value;    ///< right-hand side value if right_is_attr = FALSE
 };
+
+struct JoinSqlNode
+{
+  std::string                   relation;    ///< 连接的表名
+  std::vector<ConditionSqlNode> conditions;  ///< 查询条件，使用AND串联起来多个条件
+};
+
 /**
  * @brief 描述一个select语句
  * @ingroup SQLParser
@@ -93,6 +101,7 @@ struct SelectSqlNode
   std::vector<std::string>                 relations;    ///< 查询的表
   std::vector<ConditionSqlNode>            conditions;   ///< 查询条件，使用AND串联起来多个条件
   std::vector<std::unique_ptr<Expression>> group_by;     ///< group by clause
+  std::vector<JoinSqlNode>                 joins;        ///< JOIN 操作的列表
 };
 
 /**

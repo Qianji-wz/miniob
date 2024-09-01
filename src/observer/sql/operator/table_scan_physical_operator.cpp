@@ -13,6 +13,7 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "sql/operator/table_scan_physical_operator.h"
+#include "common/log/log.h"
 #include "event/sql_debug.h"
 #include "storage/table/table.h"
 
@@ -35,7 +36,7 @@ RC TableScanPhysicalOperator::next()
   bool filter_result = false;
   while (OB_SUCC(rc = record_scanner_.next(current_record_))) {
     LOG_TRACE("got a record. rid=%s", current_record_.rid().to_string().c_str());
-    
+
     tuple_.set_record(&current_record_);
     rc = filter(tuple_, filter_result);
     if (rc != RC::SUCCESS) {
@@ -73,6 +74,7 @@ RC TableScanPhysicalOperator::filter(RowTuple &tuple, bool &result)
   RC    rc = RC::SUCCESS;
   Value value;
   for (unique_ptr<Expression> &expr : predicates_) {
+    LOG_INFO("expr,name = %s",expr->name());
     rc = expr->get_value(tuple, value);
     if (rc != RC::SUCCESS) {
       return rc;

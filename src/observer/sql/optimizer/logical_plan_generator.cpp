@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/optimizer/logical_plan_generator.h"
 
 #include <common/log/log.h>
+#include <cstddef>
 
 #include "sql/operator/calc_logical_operator.h"
 #include "sql/operator/delete_logical_operator.h"
@@ -99,23 +100,39 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
   unique_ptr<LogicalOperator> table_oper(nullptr);
   last_oper = &table_oper;
 
-  const std::vector<Table *> &tables = select_stmt->tables();
+  const std::vector<Table *>                     &tables     = select_stmt->tables();
+  const std::unordered_map<string, FilterStmt *> &filter_map = select_stmt->filter_map();
   for (Table *table : tables) {
 
     unique_ptr<LogicalOperator> table_get_oper(new TableGetLogicalOperator(table, ReadWriteMode::READ_ONLY));
     if (table_oper == nullptr) {
       table_oper = std::move(table_get_oper);
+      continue;
     } else {
       JoinLogicalOperator *join_oper = new JoinLogicalOperator;
       join_oper->add_child(std::move(table_oper));
       join_oper->add_child(std::move(table_get_oper));
       table_oper = unique_ptr<LogicalOperator>(join_oper);
     }
+
+    //若是join，构造逻辑树增加过滤节点
+    auto it = filter_map.find(table->name());
+    if (it->second != nullptr) {
+      unique_ptr<LogicalOperator> predicate_oper;
+      RC                          rc = create_plan(it->second, predicate_oper);
+      if (OB_FAIL(rc)) {
+        LOG_WARN("failed to create predicate logical plan. rc=%s", strrc(rc));
+        return rc;
+      }
+      if (predicate_oper) {
+        predicate_oper->add_child(std::move(table_oper));
+        table_oper = std::move(predicate_oper);  // 将新的 predicate_oper 赋值给 table_oper
+      }
+    }
   }
 
   unique_ptr<LogicalOperator> predicate_oper;
-
-  RC rc = create_plan(select_stmt->filter_stmt(), predicate_oper);
+  RC                          rc = create_plan(select_stmt->filter_stmt(), predicate_oper);
   if (OB_FAIL(rc)) {
     LOG_WARN("failed to create predicate logical plan. rc=%s", strrc(rc));
     return rc;

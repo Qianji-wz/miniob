@@ -121,7 +121,8 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         NE
         LK
         NLK
-
+        INNER
+        JOIN
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
 %union {
@@ -139,6 +140,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
   std::vector<ConditionSqlNode> *            condition_list;
   std::vector<RelAttrSqlNode> *              rel_attr_list;
   std::vector<std::string> *                 relation_list;
+  std::vector<JoinSqlNode>*                  join_list;
   char *                                     string;
   const char *                               aggregate_func;  // 用于存储聚合函数类型
   int                                        number;
@@ -164,6 +166,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %type <attr_infos>          attr_def_list
 %type <attr_info>           attr_def
 %type <value_list>          value_list
+%type <join_list>           join_list
 %type <condition_list>      where
 %type <condition_list>      condition_list
 %type <string>              storage_format
@@ -477,7 +480,7 @@ update_stmt:      /*  update 语句的语法解析树*/
     }
     ;
 select_stmt:        /*  select 语句的语法解析树*/
-    SELECT expression_list FROM rel_list where group_by
+    SELECT expression_list FROM rel_list join_list where group_by
     {
       $$ = new ParsedSqlNode(SCF_SELECT);
       if ($2 != nullptr) {
@@ -491,13 +494,17 @@ select_stmt:        /*  select 语句的语法解析树*/
       }
 
       if ($5 != nullptr) {
-        $$->selection.conditions.swap(*$5);
+        $$->selection.joins.swap(*$5);
         delete $5;
       }
 
       if ($6 != nullptr) {
-        $$->selection.group_by.swap(*$6);
+        $$->selection.conditions.swap(*$6);
         delete $6;
+      }
+      if ($7 != nullptr) {
+        $$->selection.group_by.swap(*$7);
+        delete $7;
       }
     }
     ;
@@ -613,6 +620,38 @@ rel_list:
       free($1);
     }
     ;
+
+join_list:
+    /* 空 */
+    { 
+      $$ = nullptr; 
+    }
+  | join_list INNER JOIN relation ON condition_list
+    {
+      if ($1 == nullptr) {
+        $$ = new std::vector<JoinSqlNode>();
+      } else {
+        $$ = $1;
+      }
+      
+      JoinSqlNode join_node;
+      join_node.relation = $4;            
+      join_node.conditions = $6 ? *$6 : std::vector<ConditionSqlNode>(); 
+
+      $$->push_back(join_node);
+
+      if ($6 != nullptr) {
+        delete $6;  // 删除不再需要的条件列表指针
+      }
+    }
+    ;
+
+
+
+
+
+
+
 
 where:
     /* empty */
