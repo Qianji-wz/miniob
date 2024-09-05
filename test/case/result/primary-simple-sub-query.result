@@ -18,7 +18,7 @@ INSERT INTO ssq_2 VALUES (2, 7, 10.5);
 SUCCESS
 INSERT INTO ssq_2 VALUES (5, 3, 12.6);
 SUCCESS
-
+select col1 from ssq_1 where id in (select ssq_2.id from ssq_2);
 1. SELECT
 select * from ssq_1 where id in (select ssq_2.id from ssq_2);
 1 | 4 | 11.2

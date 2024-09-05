@@ -108,15 +108,16 @@ extern int yydebug;
     GE = 309,                      /* GE  */
     NE = 310,                      /* NE  */
     LK = 311,                      /* LK  */
-    NLK = 312,                     /* NLK  */
+    NOT = 312,                     /* NOT  */
     INNER = 313,                   /* INNER  */
     JOIN = 314,                    /* JOIN  */
-    NUMBER = 315,                  /* NUMBER  */
-    FLOAT = 316,                   /* FLOAT  */
-    ID = 317,                      /* ID  */
-    DATE_STR = 318,                /* DATE_STR  */
-    SSS = 319,                     /* SSS  */
-    UMINUS = 320                   /* UMINUS  */
+    IN = 315,                      /* IN  */
+    NUMBER = 316,                  /* NUMBER  */
+    FLOAT = 317,                   /* FLOAT  */
+    ID = 318,                      /* ID  */
+    DATE_STR = 319,                /* DATE_STR  */
+    SSS = 320,                     /* SSS  */
+    UMINUS = 321                   /* UMINUS  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -125,7 +126,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 128 "yacc_sql.y"
+#line 129 "yacc_sql.y"
 
 
   ParsedSqlNode *                            sql_node;
@@ -147,7 +148,7 @@ union YYSTYPE
   int                                        number;
   float                                      floats;
 
-#line 151 "yacc_sql.hpp"
+#line 152 "yacc_sql.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;

@@ -162,7 +162,7 @@ bool like_match(const std::string &value, const std::string &like_pattern)
 RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &result) const
 {
   RC rc = RC::SUCCESS;
-  if (comp_ == LIKE) {
+  if (comp_ == LIKE_OP) {
     result = like_match(left.get_string(), right.get_string());
     return rc;
   } else if (comp_ == NOT_LIKE) {
@@ -189,9 +189,6 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
       result = (cmp_result >= 0);
     } break;
     case GREAT_THAN: {
-      result = (cmp_result > 0);
-    } break;
-    case LIKE: {
       result = (cmp_result > 0);
     } break;
     case NO_COMP: {

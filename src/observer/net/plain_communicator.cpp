@@ -273,6 +273,7 @@ RC PlainCommunicator::write_tuple_result(SqlResult *sql_result)
 {
   RC     rc    = RC::SUCCESS;
   Tuple *tuple = nullptr;
+
   while (RC::SUCCESS == (rc = sql_result->next_tuple(tuple))) {
     assert(tuple != nullptr);
 
@@ -296,6 +297,8 @@ RC PlainCommunicator::write_tuple_result(SqlResult *sql_result)
         sql_result->close();
         return rc;
       }
+      // 存储结果
+      sql_result->add_subquery_results(value);
 
       string cell_str = value.to_string();
 
@@ -319,6 +322,11 @@ RC PlainCommunicator::write_tuple_result(SqlResult *sql_result)
 
   if (rc == RC::RECORD_EOF) {
     rc = RC::SUCCESS;
+  }
+
+  LOG_INFO("打印 select 结果： ");
+  for (auto it : sql_result->get_subquery_results()) {
+    LOG_INFO(": %s",it.to_string().c_str());
   }
   return rc;
 }

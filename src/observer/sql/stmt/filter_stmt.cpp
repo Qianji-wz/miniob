@@ -13,6 +13,7 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "sql/stmt/filter_stmt.h"
+#include "sql/stmt/select_stmt.h"
 #include "common/lang/string.h"
 #include "common/log/log.h"
 #include "common/rc.h"
@@ -38,8 +39,7 @@ RC FilterStmt::create(Db *db, Table *default_table, std::unordered_map<std::stri
   FilterStmt *tmp_stmt = new FilterStmt();
   for (int i = 0; i < condition_num; i++) {
     FilterUnit *filter_unit = nullptr;
-
-    rc = create_filter_unit(db, default_table, tables, conditions[i], filter_unit);
+    rc                      = create_filter_unit(db, default_table, tables, conditions[i], filter_unit);
     if (rc != RC::SUCCESS) {
       delete tmp_stmt;
       LOG_WARN("failed to create filter unit. condition index=%d", i);
@@ -80,27 +80,6 @@ RC get_table_and_field(Db *db, Table *default_table, std::unordered_map<std::str
   return RC::SUCCESS;
 }
 
-double stringToDouble(const std::string &str)
-{
-  std::string numericPart;
-  bool        decimalPointEncountered = false;
-
-  // Traverse the string and accumulate numeric characters, including a single decimal point
-  for (char c : str) {
-    if (isdigit(c)) {
-      numericPart += c;
-    } else if (c == '.' && !decimalPointEncountered) {
-      numericPart += c;
-      decimalPointEncountered = true;  // Only allow one decimal point
-    } else {
-      break;  // Stop at the first non-numeric, non-decimal character
-    }
-  }
-
-  // Convert the accumulated numeric part to a double
-  return numericPart.empty() ? 0.0 : std::stod(numericPart);
-}
-
 RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
     const ConditionSqlNode &condition, FilterUnit *&filter_unit)
 {
@@ -114,10 +93,20 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
 
   filter_unit = new FilterUnit;
   //定义两个attrtype，用于判断类型是否相同
-  AttrType attr_left, attr_right;
+  AttrType attr_left = AttrType::UNDEFINED, attr_right = AttrType::UNDEFINED;
   int      left_is_attr  = condition.left_is_attr;
   int      right_is_attr = condition.right_is_attr;
-  if (condition.left_is_attr) {
+  if (condition.left_subquery != nullptr) {
+    // 设置子查询
+    Stmt *subquery_stmt = nullptr;
+    rc                  = SelectStmt::create(db, condition.left_subquery->selection, subquery_stmt);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("failed to create subquery stmt. rc=%d", rc);
+      delete filter_unit;
+      return rc;
+    }
+    filter_unit->set_left_subquery(subquery_stmt);
+  } else if (left_is_attr) {
     Table           *table = nullptr;
     const FieldMeta *field = nullptr;
     rc                     = get_table_and_field(db, default_table, tables, condition.left_attr, table, field);
@@ -136,7 +125,17 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     filter_unit->set_left(filter_obj);
   }
 
-  if (condition.right_is_attr) {
+  if (condition.right_subquery != nullptr) {
+    // 设置子查询
+    Stmt *subquery_stmt = nullptr;
+    rc                  = SelectStmt::create(db, condition.right_subquery->selection, subquery_stmt);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("failed to create subquery stmt. rc=%d", rc);
+      delete filter_unit;
+      return rc;
+    }
+    filter_unit->set_right_subquery(subquery_stmt);
+  } else if (right_is_attr) {
     Table           *table = nullptr;
     const FieldMeta *field = nullptr;
     rc                     = get_table_and_field(db, default_table, tables, condition.right_attr, table, field);
@@ -177,7 +176,6 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       } else {
         return rc;
       }
-
     } else if (attr_left == AttrType::INTS && attr_right == AttrType::FLOATS) {
       if (left_is_attr && !right_is_attr) {
         //左属性右数据
@@ -201,17 +199,9 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       //因为在词法解析时已经判断过了
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;
     } else if (attr_left == AttrType::CHARS && attr_right == AttrType::DATES) {
-      //将date转成char
+      // TODO将date转成char
       return rc;
     }
-    // else if (attr_left == AttrType::CHARS && attr_right == AttrType::FLOATS) {
-    //   //将float转成char
-
-    // } else {
-    //   // LOG_INFO("set comop=NO_COMP");
-    //   // filter_unit->set_comp(CompOp::NO_COMP);
-    //   // return rc;
-    // }
   }
 
   return rc;

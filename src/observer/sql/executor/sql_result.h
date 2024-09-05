@@ -19,6 +19,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "sql/expr/tuple.h"
 #include "sql/operator/physical_operator.h"
+#include "sql/parser/value.h"
 
 class Session;
 
@@ -38,6 +39,7 @@ public:
   void set_tuple_schema(const TupleSchema &schema);
   void set_return_code(RC rc) { return_code_ = rc; }
   void set_state_string(const std::string &state_string) { state_string_ = state_string; }
+  void add_subquery_results(Value value) { subquery_results_.push_back(value); }
 
   void set_operator(std::unique_ptr<PhysicalOperator> oper);
 
@@ -45,6 +47,8 @@ public:
   const TupleSchema &tuple_schema() const { return tuple_schema_; }
   RC                 return_code() const { return return_code_; }
   const std::string &state_string() const { return state_string_; }
+
+  std::vector<Value> get_subquery_results() const { return subquery_results_; }
 
   RC open();
   RC close();
@@ -57,4 +61,6 @@ private:
   TupleSchema                       tuple_schema_;       ///< 返回的表头信息。可能有也可能没有
   RC                                return_code_ = RC::SUCCESS;
   std::string                       state_string_;
+
+  std::vector<Value> subquery_results_;  //保存子查询结果
 };

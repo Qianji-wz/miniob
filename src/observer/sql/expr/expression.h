@@ -18,10 +18,11 @@ See the Mulan PSL v2 for more details. */
 #include <string>
 
 #include "sql/parser/value.h"
+#include "sql/stmt/stmt.h"
 #include "storage/field/field.h"
 #include "sql/expr/aggregator.h"
 #include "storage/common/chunk.h"
-
+#include "sql/optimizer/logical_plan_generator.h"
 class Tuple;
 
 /**
@@ -40,6 +41,7 @@ enum class ExprType
   UNBOUND_FIELD,        ///< 未绑定的字段，需要在resolver阶段解析为FieldExpr
   UNBOUND_AGGREGATION,  ///< 未绑定的聚合函数，需要在resolver阶段解析为AggregateExpr
 
+  SUBQUERY,     ///子查询
   FIELD,        ///< 字段。在实际执行时，根据行数据内容提取对应字段的值
   VALUE,        ///< 常量值
   CAST,         ///< 需要做类型转换的表达式
@@ -467,4 +469,31 @@ public:
 private:
   Type                        aggregate_type_;
   std::unique_ptr<Expression> child_;
+};
+
+class SubqueryExpr : public Expression
+{
+public:
+  SubqueryExpr() : subquery_stmt_() {}
+  // SubqueryExpr(Stmt *subquery_stmt, unique_ptr<LogicalOperator> subquery_logical_operator)
+  //     : subquery_stmt_(subquery_stmt), subquery_logical_operator_(std::move(subquery_logical_operator))
+  // {}
+  SubqueryExpr(Stmt *subquery_stmt) : subquery_stmt_(subquery_stmt) {}
+  ~SubqueryExpr()
+  {
+    if (subquery_stmt_ != nullptr) {
+      delete subquery_stmt_;
+      subquery_stmt_ = nullptr;
+    }
+  }
+
+  ExprType type() const override { return ExprType::SUBQUERY; }
+  AttrType value_type() const override { return AttrType::UNDEFINED; }
+
+  RC    get_value(const Tuple &tuple, Value &value) const override { return RC::UNIMPLENMENT; }  // 不需要实现
+  Stmt *subquery() const { return subquery_stmt_; }
+
+private:
+  Stmt *subquery_stmt_ = nullptr;  // 子查询的stmt
+  // unique_ptr<LogicalOperator> subquery_logical_operator_;
 };

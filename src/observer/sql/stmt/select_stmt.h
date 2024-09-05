@@ -56,5 +56,5 @@ private:
   FilterStmt                              *filter_stmt_ = nullptr;
   std::vector<std::unique_ptr<Expression>> group_by_;
 
-  std::unordered_map<string, FilterStmt *> filter_map_;
+  std::unordered_map<string, FilterStmt *> filter_map_;  //表+条件
 };

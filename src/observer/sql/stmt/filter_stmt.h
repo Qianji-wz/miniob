@@ -47,7 +47,17 @@ class FilterUnit
 {
 public:
   FilterUnit() = default;
-  ~FilterUnit() {}
+  ~FilterUnit()
+  {
+    if (left_subquery_stmt_) {
+      delete left_subquery_stmt_;
+      left_subquery_stmt_ = nullptr;
+    }
+    if (right_subquery_stmt_) {
+      delete right_subquery_stmt_;
+      right_subquery_stmt_ = nullptr;
+    }
+  }
 
   void set_comp(CompOp comp) { comp_ = comp; }
 
@@ -59,10 +69,21 @@ public:
   const FilterObj &left() const { return left_; }
   const FilterObj &right() const { return right_; }
 
+  void       set_left_subquery(Stmt *stmt) { left_subquery_stmt_ = stmt; }
+  void       set_right_subquery(Stmt *stmt) { right_subquery_stmt_ = stmt; }
+  const bool has_left_stmt() const { return left_subquery_stmt_ != nullptr; }
+  const bool has_right_stmt() const { return right_subquery_stmt_ != nullptr; }
+
+  Stmt *left_subquery() const { return left_subquery_stmt_; }
+  Stmt *right_subquery() const { return right_subquery_stmt_; }
+
 private:
   CompOp    comp_ = NO_OP;
   FilterObj left_;
   FilterObj right_;
+
+  Stmt *left_subquery_stmt_  = nullptr;  // 新增字段，用于存储子查询的 stmt
+  Stmt *right_subquery_stmt_ = nullptr;  // 新增字段，用于存储子查询的 stmt
 };
 
 /**

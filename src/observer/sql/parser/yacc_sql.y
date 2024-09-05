@@ -120,9 +120,10 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         GE
         NE
         LK
-        NLK
+        NOT
         INNER
         JOIN
+        IN
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
 %union {
@@ -727,6 +728,26 @@ condition:
       delete $1;
       delete $3;
     }
+    | rel_attr comp_op LBRACE select_stmt RBRACE
+    {
+      $$ = new ConditionSqlNode;
+      $$->left_is_attr = 1;
+      $$->left_attr = *$1;
+      $$->comp = $2;
+      $$->right_subquery = $4;
+
+      delete $1;
+    }
+    | LBRACE select_stmt RBRACE comp_op rel_attr
+    {
+      $$ = new ConditionSqlNode;
+      $$->right_is_attr = 1;
+      $$->right_attr = *$5;
+      $$->comp = $4;
+      $$->left_subquery = $2;
+
+      delete $5;
+    }
     ;
 
 comp_op:
@@ -736,8 +757,10 @@ comp_op:
     | LE { $$ = LESS_EQUAL; }
     | GE { $$ = GREAT_EQUAL; }
     | NE { $$ = NOT_EQUAL; }
-    | LK { $$ = LIKE; }
-    | NLK { $$ = NOT_LIKE; }
+    | LK { $$ = LIKE_OP; }
+    | NOT LK { $$ = NOT_LIKE; }
+    | IN { $$ = IN_OP; }
+    | NOT IN { $$ = NOT_IN; }
     ;
 
 // your code here
