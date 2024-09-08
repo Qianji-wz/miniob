@@ -134,6 +134,27 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
     return rc;
   }
 
+  //子查询执行join
+  for (auto it : filter_stmt->filter_units()) {
+    if (it->has_left_stmt()) {
+      //有左子查询
+      SelectStmt *subquery_select_stmt = static_cast<SelectStmt *>(it->left_subquery());
+      for (auto table : tables) {
+        (subquery_select_stmt->tables_).insert(subquery_select_stmt->tables_.begin(), table);
+      }
+    }
+
+    if (it->has_right_stmt()) {
+      //有右子查询
+      // join表
+      //把主查询的表传给子查询做join
+      SelectStmt *subquery_select_stmt = static_cast<SelectStmt *>(it->right_subquery());
+      for (auto table : tables) {
+        (subquery_select_stmt->tables_).insert(subquery_select_stmt->tables_.begin(), table);
+      }
+    }
+  }
+
   // everything alright
   SelectStmt *select_stmt = new SelectStmt();
 

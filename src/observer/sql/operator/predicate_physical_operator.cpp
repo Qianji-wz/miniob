@@ -14,6 +14,9 @@ See the Mulan PSL v2 for more details. */
 
 #include "sql/operator/predicate_physical_operator.h"
 #include "common/log/log.h"
+#include "sql/expr/expression.h"
+#include "sql/operator/physical_operator.h"
+#include "sql/parser/parse_defs.h"
 #include "sql/stmt/filter_stmt.h"
 #include "storage/field/field.h"
 #include "storage/record/record.h"
@@ -38,6 +41,7 @@ RC PredicatePhysicalOperator::next()
   RC                rc   = RC::SUCCESS;
   PhysicalOperator *oper = children_.front().get();
 
+  //子查询实现思路，这里的oper->next应该取的是子查询的一行join主查询的
   while (RC::SUCCESS == (rc = oper->next())) {
     Tuple *tuple = oper->current_tuple();
     if (nullptr == tuple) {
@@ -50,6 +54,34 @@ RC PredicatePhysicalOperator::next()
     rc = expression_->get_value(*tuple, value);
     if (rc != RC::SUCCESS) {
       return rc;
+    }
+    ComparisonExpr *compareExpr = dynamic_cast<ComparisonExpr *>(expression_.get());
+    if (compareExpr) {
+      // std::cout << "Successfully casted to CompareExpr." << std::endl;
+      //  可以安全地使用 compareExpr
+      CompOp op = compareExpr->comp();
+      if (op == CompOp::IN_OP) {
+        if (value.get_boolean()) {
+          setLeftMove(true);
+          return rc;
+        }
+      } else if (op == CompOp::NOT_IN) {
+        //不在，getFlag()表示遍历完右表
+        if (!value.get_boolean()) {
+          //左表前进,右表从头遍历
+          setLeftMove(true);
+        } else if (value.get_boolean() && getRightEnd()) {
+          //为真且是最后一个
+          //左表前进,右表从头遍历
+          setLeftMove(true);
+          return rc;
+        } else if (value.get_boolean() && !getRightEnd()) {
+          //为真但不是最后一个
+          continue;
+        }
+      }
+    } else {
+      LOG_ERROR( "Failed to cast to CompareExpr." );
     }
 
     if (value.get_boolean()) {
@@ -67,7 +99,4 @@ RC PredicatePhysicalOperator::close()
 
 Tuple *PredicatePhysicalOperator::current_tuple() { return children_[0]->current_tuple(); }
 
-RC PredicatePhysicalOperator::tuple_schema(TupleSchema &schema) const
-{
-  return children_[0]->tuple_schema(schema);
-}
+RC PredicatePhysicalOperator::tuple_schema(TupleSchema &schema) const { return children_[0]->tuple_schema(schema); }

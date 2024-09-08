@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #pragma once
 
 #include "sql/expr/expression.h"
+#include "sql/operator/flag_manager.h"
 #include "sql/operator/physical_operator.h"
 
 class FilterStmt;
@@ -39,6 +40,12 @@ public:
   Tuple *current_tuple() override;
 
   RC tuple_schema(TupleSchema &schema) const override;
+
+  //设置一个标志位，在in操作上会用到
+  void setLeftMove(bool value) { FlagManager::getInstance().setLeftMove(value); }
+  bool getLeftMove() const { return FlagManager::getInstance().getLeftMove(); }
+  void setRightEnd(bool value) { FlagManager::getInstance().setRightEnd(value); }
+  bool getRightEnd() const { return FlagManager::getInstance().getRightEnd(); }
 
 private:
   std::unique_ptr<Expression> expression_;

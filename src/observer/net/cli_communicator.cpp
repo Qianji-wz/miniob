@@ -122,8 +122,9 @@ bool is_exit_command(const char *cmd)
 
 char *read_command()
 {
-  const char *prompt_str    = "miniob > ";
-  char       *input_command = my_readline(prompt_str);
+  const char *prompt_str = "miniob > ";
+
+  char *input_command = my_readline(prompt_str);
   return input_command;
 }
 

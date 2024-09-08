@@ -163,6 +163,15 @@ class RowTuple : public Tuple
 {
 public:
   RowTuple() = default;
+  RowTuple(const RowTuple &other)
+  {
+    // 深拷贝
+    this->record_ = new Record(*other.record_);
+    this->table_  = new Table(*other.table_);
+    for (auto spec : other.speces_) {
+      this->speces_.push_back(new FieldExpr(*spec));
+    }
+  }
   virtual ~RowTuple()
   {
     for (FieldExpr *spec : speces_) {

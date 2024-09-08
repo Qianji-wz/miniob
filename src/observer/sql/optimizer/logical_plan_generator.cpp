@@ -117,7 +117,8 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
 
     //若是join，构造逻辑树增加过滤节点
     auto it = filter_map.find(table->name());
-    if (it->second != nullptr) {
+
+    if (it != filter_map.end() && it->second != nullptr) {
       unique_ptr<LogicalOperator> predicate_oper;
       RC                          rc = create_plan(it->second, predicate_oper);
       if (OB_FAIL(rc)) {
@@ -128,6 +129,7 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
         predicate_oper->add_child(std::move(table_oper));
         table_oper = std::move(predicate_oper);  // 将新的 predicate_oper 赋值给 table_oper
       }
+      //判断
     }
   }
 
@@ -174,19 +176,55 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
 {
   std::vector<unique_ptr<Expression>> cmp_exprs;
   const std::vector<FilterUnit *>    &filter_units = filter_stmt->filter_units();
+
+  unique_ptr<Expression>      left_expr;
+  unique_ptr<Expression>      right_expr;
+  unique_ptr<LogicalOperator> subquery_logical_operator;
   for (const FilterUnit *filter_unit : filter_units) {
-    const FilterObj &filter_obj_left  = filter_unit->left();
-    const FilterObj &filter_obj_right = filter_unit->right();
 
-    unique_ptr<Expression> left(filter_obj_left.is_attr
-                                    ? static_cast<Expression *>(new FieldExpr(filter_obj_left.field))
-                                    : static_cast<Expression *>(new ValueExpr(filter_obj_left.value)));
+    //子查询生成逻辑计划
+    if (filter_unit->has_left_stmt() && !filter_unit->has_right_stmt()) {
+      RC rc = create(filter_unit->left_subquery(), subquery_logical_operator);
+      if (rc != RC::SUCCESS) {
+        LOG_INFO("subquery 生成逻辑计划失败");
+        return rc;
+      }
+      // left_expr                         = unique_ptr<Expression>(new SubqueryExpr(filter_unit->left_subquery()));
 
-    unique_ptr<Expression> right(filter_obj_right.is_attr
-                                     ? static_cast<Expression *>(new FieldExpr(filter_obj_right.field))
-                                     : static_cast<Expression *>(new ValueExpr(filter_obj_right.value)));
+      const FilterObj &filter_obj_left = filter_unit->left();
+      left_expr = filter_obj_left.is_attr ? unique_ptr<Expression>(new FieldExpr(filter_obj_left.field))
+                                          : unique_ptr<Expression>(new ValueExpr(filter_obj_left.value));
+      const FilterObj &filter_obj_right = filter_unit->right();
+      right_expr = filter_obj_right.is_attr ? unique_ptr<Expression>(new FieldExpr(filter_obj_right.field))
+                                            : unique_ptr<Expression>(new ValueExpr(filter_obj_right.value));
 
-    ComparisonExpr *cmp_expr = new ComparisonExpr(filter_unit->comp(), std::move(left), std::move(right));
+    } else if (!filter_unit->has_left_stmt() && filter_unit->has_right_stmt()) {
+      RC rc = create(filter_unit->right_subquery(), subquery_logical_operator);
+      if (rc != RC::SUCCESS) {
+        LOG_INFO("subquery 生成逻辑计划失败");
+        return rc;
+      }
+      // right_expr                       = unique_ptr<Expression>(new SubqueryExpr(filter_unit->right_subquery()));
+      const FilterObj &filter_obj_right = filter_unit->right();
+      right_expr = filter_obj_right.is_attr ? unique_ptr<Expression>(new FieldExpr(filter_obj_right.field))
+                                            : unique_ptr<Expression>(new ValueExpr(filter_obj_right.value));
+      const FilterObj &filter_obj_left = filter_unit->left();
+      left_expr = filter_obj_left.is_attr ? unique_ptr<Expression>(new FieldExpr(filter_obj_left.field))
+                                          : unique_ptr<Expression>(new ValueExpr(filter_obj_left.value));
+
+    } else if (filter_unit->has_left_stmt() && filter_unit->has_right_stmt()) {
+      left_expr  = unique_ptr<Expression>(new SubqueryExpr(filter_unit->left_subquery()));
+      right_expr = unique_ptr<Expression>(new SubqueryExpr(filter_unit->right_subquery()));
+
+    } else {
+      const FilterObj &filter_obj_right = filter_unit->right();
+      const FilterObj &filter_obj_left  = filter_unit->left();
+      right_expr = filter_obj_right.is_attr ? unique_ptr<Expression>(new FieldExpr(filter_obj_right.field))
+                                            : unique_ptr<Expression>(new ValueExpr(filter_obj_right.value));
+      left_expr  = filter_obj_left.is_attr ? unique_ptr<Expression>(new FieldExpr(filter_obj_left.field))
+                                           : unique_ptr<Expression>(new ValueExpr(filter_obj_left.value));
+    }
+    ComparisonExpr *cmp_expr = new ComparisonExpr(filter_unit->comp(), std::move(left_expr), std::move(right_expr));
     cmp_exprs.emplace_back(cmp_expr);
   }
 
@@ -194,6 +232,12 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
   if (!cmp_exprs.empty()) {
     unique_ptr<ConjunctionExpr> conjunction_expr(new ConjunctionExpr(ConjunctionExpr::Type::AND, cmp_exprs));
     predicate_oper = unique_ptr<PredicateLogicalOperator>(new PredicateLogicalOperator(std::move(conjunction_expr)));
+  }
+
+  if (predicate_oper) {
+    if (subquery_logical_operator) {
+      predicate_oper->add_child(std::move(subquery_logical_operator));
+    }
   }
 
   logical_operator = std::move(predicate_oper);

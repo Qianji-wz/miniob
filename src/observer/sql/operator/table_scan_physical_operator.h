@@ -44,6 +44,9 @@ public:
 
   void set_predicates(std::vector<std::unique_ptr<Expression>> &&exprs);
 
+  // log
+  Table *get_table() { return table_; }
+
 private:
   RC filter(RowTuple &tuple, bool &result);
 

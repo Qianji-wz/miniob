@@ -45,10 +45,10 @@ RC TableScanPhysicalOperator::next()
     }
 
     if (filter_result) {
-      sql_debug("get a tuple: %s", tuple_.to_string().c_str());
+      sql_debug("table %s, get a tuple: %s", this->get_table()->name(), tuple_.to_string().c_str());
       break;
     } else {
-      sql_debug("a tuple is filtered: %s", tuple_.to_string().c_str());
+      sql_debug("table %s, a tuple is filtered: %s", this->get_table()->name(), tuple_.to_string().c_str());
     }
   }
   return rc;
@@ -58,6 +58,8 @@ RC TableScanPhysicalOperator::close() { return record_scanner_.close_scan(); }
 
 Tuple *TableScanPhysicalOperator::current_tuple()
 {
+
+  LOG_INFO("current_record: %s",current_record_.rid().to_string().c_str());
   tuple_.set_record(&current_record_);
   return &tuple_;
 }

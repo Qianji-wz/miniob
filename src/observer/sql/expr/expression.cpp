@@ -191,6 +191,13 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
     case GREAT_THAN: {
       result = (cmp_result > 0);
     } break;
+    case IN_OP: {
+      result = (0 == cmp_result);
+    } break;
+    case NOT_IN: {
+      result = (cmp_result != 0);
+    } break;
+
     case NO_COMP: {
       result = false;
     } break;

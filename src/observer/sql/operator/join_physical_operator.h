@@ -14,8 +14,11 @@ See the Mulan PSL v2 for more details. */
 
 #pragma once
 
+#include "sql/expr/tuple.h"
 #include "sql/operator/physical_operator.h"
+#include "sql/operator/flag_manager.h"
 #include "sql/parser/parse.h"
+#include <memory>
 
 /**
  * @brief 最简单的两表（称为左表、右表）join算子
@@ -26,14 +29,25 @@ class NestedLoopJoinPhysicalOperator : public PhysicalOperator
 {
 public:
   NestedLoopJoinPhysicalOperator();
-  virtual ~NestedLoopJoinPhysicalOperator() = default;
-
+  // virtual ~NestedLoopJoinPhysicalOperator() = default;
+  ~NestedLoopJoinPhysicalOperator()
+  {
+    for (Tuple *tuple : right_tuples_) {
+      delete tuple;
+    }
+    right_tuples_.clear();
+  }
   PhysicalOperatorType type() const override { return PhysicalOperatorType::NESTED_LOOP_JOIN; }
 
   RC     open(Trx *trx) override;
   RC     next() override;
   RC     close() override;
   Tuple *current_tuple() override;
+
+  void setLeftMove(bool value) { FlagManager::getInstance().setLeftMove(value); }
+  bool getLeftMove() const { return FlagManager::getInstance().getLeftMove(); }
+  void setRightEnd(bool value) { FlagManager::getInstance().setRightEnd(value); }
+  bool getRightEnd() const { return FlagManager::getInstance().getRightEnd(); }
 
 private:
   RC left_next();   //! 左表遍历下一条数据
@@ -43,11 +57,14 @@ private:
   Trx *trx_ = nullptr;
 
   //! 左表右表的真实对象是在PhysicalOperator::children_中，这里是为了写的时候更简单
-  PhysicalOperator *left_        = nullptr;
-  PhysicalOperator *right_       = nullptr;
-  Tuple            *left_tuple_  = nullptr;
-  Tuple            *right_tuple_ = nullptr;
-  JoinedTuple       joined_tuple_;         //! 当前关联的左右两个tuple
-  bool              round_done_   = true;  //! 右表遍历的一轮是否结束
-  bool              right_closed_ = true;  //! 右表算子是否已经关闭
+  PhysicalOperator       *left_        = nullptr;
+  PhysicalOperator       *right_       = nullptr;
+  Tuple                  *left_tuple_  = nullptr;
+  Tuple                  *right_tuple_ = nullptr;
+  std::vector<RowTuple *> right_tuples_;
+  long unsigned int       i_right_tuples_ = 0;
+
+  JoinedTuple joined_tuple_;         //! 当前关联的左右两个tuple
+  bool        round_done_   = true;  //! 右表遍历的一轮是否结束
+  bool        right_closed_ = true;  //! 右表算子是否已经关闭
 };

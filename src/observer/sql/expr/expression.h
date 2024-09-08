@@ -475,10 +475,14 @@ class SubqueryExpr : public Expression
 {
 public:
   SubqueryExpr() : subquery_stmt_() {}
-  // SubqueryExpr(Stmt *subquery_stmt, unique_ptr<LogicalOperator> subquery_logical_operator)
+  // SubqueryExpr(Stmt *subquery_stmt, unique_ptr<LogicalOperator> &subquery_logical_operator)
   //     : subquery_stmt_(subquery_stmt), subquery_logical_operator_(std::move(subquery_logical_operator))
   // {}
-  SubqueryExpr(Stmt *subquery_stmt) : subquery_stmt_(subquery_stmt) {}
+  SubqueryExpr(Stmt *subquery_stmt) : subquery_stmt_(subquery_stmt)
+  {
+
+    //
+  }
   ~SubqueryExpr()
   {
     if (subquery_stmt_ != nullptr) {

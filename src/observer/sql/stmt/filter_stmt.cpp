@@ -13,6 +13,7 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "sql/stmt/filter_stmt.h"
+#include "sql/expr/expression.h"
 #include "sql/stmt/select_stmt.h"
 #include "common/lang/string.h"
 #include "common/log/log.h"
@@ -106,6 +107,20 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       return rc;
     }
     filter_unit->set_left_subquery(subquery_stmt);
+    //根据子查询的expression绑定
+    SelectStmt *subquery_select_stmt = static_cast<SelectStmt *>(subquery_stmt);
+    // std::vector<std::unique_ptr<Expression>> subquery_expressions = subquery_select_stmt->query_expressions();
+    ASSERT(subquery_select_stmt->query_expressions().size() > 0, "子查询表达式必须大于0");
+    for (auto &sub_expr : subquery_select_stmt->query_expressions()) {
+      if (sub_expr->type() == ExprType::FIELD) {
+        auto      field_sub_expr = static_cast<FieldExpr *>(sub_expr.get());
+        FilterObj filter_obj;
+
+        filter_obj.init_attr(field_sub_expr->field());
+        filter_unit->set_left(filter_obj);
+      }
+    }
+
   } else if (left_is_attr) {
     Table           *table = nullptr;
     const FieldMeta *field = nullptr;
@@ -135,6 +150,19 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       return rc;
     }
     filter_unit->set_right_subquery(subquery_stmt);
+    //根据子查询的expression绑定
+    SelectStmt *subquery_select_stmt = static_cast<SelectStmt *>(subquery_stmt);
+    // std::vector<std::unique_ptr<Expression>> subquery_expressions = subquery_select_stmt->query_expressions();
+    ASSERT(subquery_select_stmt->query_expressions().size() > 0, "子查询表达式必须大于0");
+    for (auto &sub_expr : subquery_select_stmt->query_expressions()) {
+      if (sub_expr->type() == ExprType::FIELD) {
+        auto      field_sub_expr = static_cast<FieldExpr *>(sub_expr.get());
+        FilterObj filter_obj;
+
+        filter_obj.init_attr(field_sub_expr->field());
+        filter_unit->set_right(filter_obj);
+      }
+    }
   } else if (right_is_attr) {
     Table           *table = nullptr;
     const FieldMeta *field = nullptr;
